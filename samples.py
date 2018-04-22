@@ -173,8 +173,8 @@ def _test():
   import doctest
   doctest.testmod() # Test the interactive sessions in function comments
   n = 1
-#  items = loadDataFile("facedata/facedatatrain", n,60,70)
-#  labels = loadLabelsFile("facedata/facedatatrainlabels", n)
+  # items = loadDataFile("facedata/facedatatrain", n,60,70)
+  # labels = loadLabelsFile("facedata/facedatatrainlabels", n)
   items = loadDataFile("digitdata/trainingimages", n,28,28)
   labels = loadLabelsFile("digitdata/traininglabels", n)
   for i in range(1):
@@ -186,4 +186,4 @@ def _test():
     print items[i].getPixels()
 
 if __name__ == "__main__":
-  _test()  
+  _test()

@@ -9,6 +9,7 @@
 import util
 import classificationMethod
 import math
+import samples
 
 class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
   """
@@ -108,5 +109,108 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     return featuresOdds
     
 
-    
-      
+
+"this code takes one face image and one data image, breaks up the images into quadrants and calculates"
+"the number of pixels in each quadrant, still have to generalize these to functions"
+
+if __name__ == '__main__':
+
+    "stores training data and appropriate labels for faces"
+    items = samples.loadDataFile("facedata/facedatatrain",1,60,70)
+    labels = samples.loadLabelsFile("facedata/facedatatrainlabels",1)
+    print items[0]
+
+    "break up face data into 42 10x10 pixel quadrants for feature extraction"
+    x = 0; y = 0;
+    feature_quadrants = [] #will be a list of lists
+    temp_array = []
+    i_start = 0;  i_end = 10;
+    j_start = 0;  j_end = 10;
+
+    #converts facedata into 42 10x10 pixel quadrants each
+    while i_end <= 60 and j_end <= 70:
+        #parse through image and store pixels in a temporary array
+        for i in range(i_start, i_end):
+            for j in range(j_start, j_end):
+                temp_array.append(items[0].getPixel(i,j))
+
+        #add temp_array to feature_quadrant array and reassign temp_array
+        feature_quadrants.append(temp_array)
+        temp_array = []
+
+        #update iterators for parsing through image
+        if j_end != 70:
+            j_start = j_end
+            j_end = j_end + 10
+        else:
+            j_start = 0
+            j_end = 10
+            i_start = i_end
+            i_end = i_end + 10
+
+    print feature_quadrants
+    print len(feature_quadrants)
+
+    "determines the number of non-zero of pixels in each quadrant"
+    pix_counter = 0; #keeps track of non-zero pixels in a quadrant
+    pcounter_array = []
+
+    for x in range(len(feature_quadrants)):
+        temp = feature_quadrants[x];
+        for y in range(len(temp)):
+            if temp[y] != 0:
+                pix_counter = pix_counter + 1
+        pcounter_array.append(pix_counter)
+        pix_counter = 0
+
+    print pcounter_array
+    print len(pcounter_array)
+
+    "break up digit data into 49 4x4 pixel quadrants for feature extraction"
+    items = samples.loadDataFile("digitdata/trainingimages", 1, 28, 28)
+    labels = samples.loadLabelsFile("digitdata/traininglabels", 1)
+    print items[0]
+    x = 0;
+    y = 0;
+    feature_quadrants2 = []  # will be a list of lists
+    temp_array = []
+    i_start = 0; i_end = 4;
+    j_start = 0; j_end = 4;
+
+    while i_end <= 28 and j_end <= 28:
+        #parse through image and store pixels in a temporary array
+        for i in range(i_start, i_end):
+            for j in range(j_start, j_end):
+                temp_array.append(items[0].getPixel(i,j))
+
+        #add temp_array to feature_quadrant array and reassign temp_array
+        feature_quadrants2.append(temp_array)
+        temp_array = []
+
+        #update iterators for parsing through image
+        if j_end != 28:
+            j_start = j_end
+            j_end = j_end + 4
+        else:
+            j_start = 0
+            j_end = 4
+            i_start = i_end
+            i_end = i_end + 4
+
+    print feature_quadrants2
+    print len(feature_quadrants2)
+
+    "determines the number of non-zero of pixels in each quadrant"
+    pix_counter2 = 0;  # keeps track of non-zero pixels in a quadrant
+    pcounter_array2 = []
+
+    for x in range(len(feature_quadrants2)):
+        temp = feature_quadrants2[x];
+        for y in range(len(temp)):
+            if temp[y] != 0:
+                pix_counter2 = pix_counter2 + 1
+        pcounter_array2.append(pix_counter2)
+        pix_counter2 = 0
+
+    print pcounter_array2
+    print len(pcounter_array2)

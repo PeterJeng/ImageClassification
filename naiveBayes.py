@@ -289,10 +289,113 @@ if __name__ == '__main__':
             else:
                 false_data[k][temp[k]] = false_data[k][temp[k]] + 1
 
+    print "Tuning phase, using validation data to fine tune the smoothing parameter"
+    kgrid = [0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 20, 50]
+    valData = samples.loadDataFile("facedata/facedatavalidation", n, 60, 70)
+    valLabels = samples.loadLabelsFile("facedata/facedatavalidationlabels", n)
+    all_feature_vectors = []  # stores all 42 quadrants of all test images
+    num_correct = []
 
-    print "Testing Phase, using k = 1 as smoothing param (haven't tuned using validation data yet)"
+    for b in range(len(kgrid)):
+        smoothing_param = kgrid[b]
+        # Step 1
+        for k in range(n):
+            # break up face data into 42 10x10 pixel quadrants for feature extraction
+            feature_quadrants = []  # will be a list of lists
+            temp_array = []
+            i_start = 0;
+            i_end = 10;
+            j_start = 0;
+            j_end = 10;
+
+            # converts facedata into 42 10x10 pixel quadrants each
+            while i_end <= 60 and j_end <= 70:
+                # parse through image and store pixels in a temporary array
+                for i in range(i_start, i_end):
+                    for j in range(j_start, j_end):
+                        temp_array.append(valData[k].getPixel(i, j))
+
+                # add temp_array to feature_quadrant array and reassign temp_array
+                feature_quadrants.append(temp_array)
+                temp_array = []
+
+                # update iterators for parsing through image
+                if j_end != 70:
+                    j_start = j_end
+                    j_end = j_end + 10
+                else:
+                    j_start = 0
+                    j_end = 10
+                    i_start = i_end
+                    i_end = i_end + 10
+            all_feature_vectors.append(feature_quadrants)
+
+        # Step 2
+        for k in range(len(all_feature_vectors)):
+            pix_counter = 0;  # keeps track of non-zero pixels in a quadrant
+            pcounter_array = []
+            feature_quadrants = all_feature_vectors[k]
+            for x in range(len(feature_quadrants)):
+                temp = feature_quadrants[x];
+                for y in range(len(temp)):
+                    if temp[y] != 0:
+                        pix_counter = pix_counter + 1
+                pcounter_array.append(pix_counter)
+                pix_counter = 0
+            all_pcounter_vectors.append(pcounter_array)
+
+        # Step 3 - only doing it for facedata images right now
+        p_x_ytrue = 1;  # p(x|y = true)
+        p_x_yfalse = 1;  # p(x|y = false)
+        denom1 = float((float(true_count) / float(n)) + smoothing_param)
+        denom2 = float((float(false_count) / float(n)) + smoothing_param)
+        l_x_array = []
+        predictions = []
+
+        for q in range(n):
+            pcounter = all_pcounter_vectors[q]
+            for r in range(len(pcounter)):
+                if pcounter[r] > max_num:
+                    t1 = t2 = 0;
+                else:
+                    t1 = true_data[r][pcounter[r]]
+                    t2 = false_data[r][pcounter[r]]
+                num1 = float(true_count * t1 + smoothing_param)
+                num2 = float(false_count * t2 + smoothing_param)
+                temp1 = num1 / denom1
+                temp2 = num2 / denom2
+                p_x_ytrue = float(p_x_ytrue * temp1)
+                p_x_yfalse = float(p_x_yfalse * temp2)
+                l_x = float(p_x_ytrue*(float(true_count)/float(n)))/float(p_x_yfalse * (float(false_count) / float(n)))
+            l_x_array.append(l_x)
+            p_x_ytrue = p_x_yfalse = 1
+
+        for q in range(len(l_x_array)):
+            if l_x_array[q] >= 1:
+                predictions.append(1)
+            else:
+                predictions.append(0)
+
+        correct = 0
+        for q in range(len(l_x_array)):
+            if predictions[q] == valLabels[q]:
+                correct = correct + 1
+        num_correct.append(correct)
+
+    best_k_ind = 0;
+    best_k = 0;
+    for b in range(len(num_correct)):
+        if num_correct[b] > best_k:
+            best_k = num_correct[b]
+            best_k_ind = b
+
+    smoothing_param = kgrid[best_k_ind]
+    print "smoothing_param"
+    print num_correct
+    print smoothing_param
+
+    print "Testing Phase"
     #calculating likelihood of testing data
-    smoothing_param = 1
     #steps to take
     #1. separate testing data into quadrants
     #2. count number of non-zero pixels in each quadrant
@@ -382,13 +485,6 @@ if __name__ == '__main__':
             predictions.append(1)
         else:
             predictions.append(0)
-
-    print "l_x array"
-    print l_x_array
-    print "predictions"
-    print predictions
-    print "actual"
-    print testLabels
 
     correct = 0
     for q in range(len(l_x_array)):

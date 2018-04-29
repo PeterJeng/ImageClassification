@@ -206,7 +206,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 
       return all_arrays
 
-#currently working on figuring out the logic for trainAndTune()
+#currently working on improving accuracy for face data, still have to do it for digit data
 if __name__ == '__main__':
     print "Training Phase"
     #stores training data and appropriate labels for faces
@@ -390,9 +390,10 @@ if __name__ == '__main__':
             best_k_ind = b
 
     smoothing_param = kgrid[best_k_ind]
-    print "smoothing_param"
-    print num_correct
+    print "smoothing_param is "
     print smoothing_param
+    print "best num correct in validation set is "
+    print best_k
 
     print "Testing Phase"
     #calculating likelihood of testing data

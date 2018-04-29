@@ -61,8 +61,15 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     self.legalLabels.
     """
 
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    "*** YOUR CODE HERE ***" #still need to code for digit data
+    # stores training data and appropriate labels for faces
+    n = 10;
+    items = samples.loadDataFile("facedata/facedatatrain", n, 60, 70)
+    labels = samples.loadLabelsFile("facedata/facedatatrainlabels", n)
+    all_feature_vectors = []  # stores all 42 quadrants of all sample images
+    all_pcounter_vectors = [] # stores num of pixels of in all 42 quadrants in all sample images
+    all_feature_vectors = self.faceDivideData(items,n)
+    all_pcounter_vectors = self.featureExtractor(all_feature_vectors,n)
         
   def classify(self, testData):
     """
@@ -77,7 +84,8 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
       guesses.append(posterior.argMax())
       self.posteriors.append(posterior)
     return guesses
-      
+
+#do we have to implement this??
   def calculateLogJointProbabilities(self, datum):
     """
     Returns the log-joint distribution over legal labels and the datum.
@@ -109,91 +117,105 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     return featuresOdds
 
 #wrote helper methods to aid with feature extraction for naiveBayes below
-  def faceDivideData(self, items):
+  def faceDivideData(self, items, num_samples):
       "break up face data into 42 10x10 pixel quadrants for feature extraction"
       x = 0; y = 0;
       feature_quadrants = []  # will be a list of lists
       temp_array = []
+      all_arrays = []
       i_start = 0; i_end = 10;
       j_start = 0; j_end = 10;
 
-      # converts facedata into 42 10x10 pixel quadrants each
-      while i_end <= 60 and j_end <= 70:
-          # parse through image and store pixels in a temporary array
-          for i in range(i_start, i_end):
-              for j in range(j_start, j_end):
-                  temp_array.append(items.getPixel(i, j))
+      for m in range(num_samples):
+          # converts facedata into 42 10x10 pixel quadrants each
+          while i_end <= 60 and j_end <= 70:
+              # parse through image and store pixels in a temporary array
+              for i in range(i_start, i_end):
+                  for j in range(j_start, j_end):
+                      temp_array.append(items[m].getPixel(i, j))
 
-          # add temp_array to feature_quadrant array and reassign temp_array
-          feature_quadrants.append(temp_array)
-          temp_array = []
+              # add temp_array to feature_quadrant array and reassign temp_array
+              feature_quadrants.append(temp_array)
+              temp_array = []
 
-          # update iterators for parsing through image
-          if j_end != 70:
-              j_start = j_end
-              j_end = j_end + 10
-          else:
-              j_start = 0
-              j_end = 10
-              i_start = i_end
-              i_end = i_end + 10
+              # update iterators for parsing through image
+              if j_end != 70:
+                  j_start = j_end
+                  j_end = j_end + 10
+              else:
+                  j_start = 0
+                  j_end = 10
+                  i_start = i_end
+                  i_end = i_end + 10
+          all_arrays.append(feature_quadrants)
+          feature_quadrants = []
 
-      return feature_quadrants
+      return all_arrays
 
-  def digitDivideData(self, items):
+  def digitDivideData(self, items, num_samples):
       "break up digit data into 49 4x4 pixel quadrants for feature extraction"
-      items = samples.loadDataFile("digitdata/trainingimages", 1, 28, 28)
-      labels = samples.loadLabelsFile("digitdata/traininglabels", 1)
       x = 0; y = 0;
       feature_quadrants = []  # will be a list of lists
       temp_array = []
+      all_arrays = []
       i_start = 0; i_end = 4;
       j_start = 0; j_end = 4;
 
-      while i_end <= 28 and j_end <= 28:
-          # parse through image and store pixels in a temporary array
-          for i in range(i_start, i_end):
-              for j in range(j_start, j_end):
-                  temp_array.append(items.getPixel(i, j))
+      for m in range(num_samples):
+          while i_end <= 28 and j_end <= 28:
+              # parse through image and store pixels in a temporary array
+              for i in range(i_start, i_end):
+                  for j in range(j_start, j_end):
+                      temp_array.append(items[m].getPixel(i, j))
 
-          # add temp_array to feature_quadrant array and reassign temp_array
-          feature_quadrants.append(temp_array)
-          temp_array = []
+              # add temp_array to feature_quadrant array and reassign temp_array
+              feature_quadrants.append(temp_array)
+              temp_array = []
 
-          # update iterators for parsing through image
-          if j_end != 28:
-              j_start = j_end
-              j_end = j_end + 4
-          else:
-              j_start = 0
-              j_end = 4
-              i_start = i_end
-              i_end = i_end + 4
-      return feature_quadrants
+              # update iterators for parsing through image
+              if j_end != 28:
+                  j_start = j_end
+                  j_end = j_end + 4
+              else:
+                  j_start = 0
+                  j_end = 4
+                  i_start = i_end
+                  i_end = i_end + 4
+          all_arrays.append(feature_quadrants)
+          feature_quadrants = []
 
-  def featureExtractor(self, feature_quadrants):
+      return all_arrays
+
+  def featureExtractor(self, all_feature_vectors, num_samples):
       "determines the number of non-zero of pixels in each quadrant"
       pix_counter = 0;  # keeps track of non-zero pixels in a quadrant
       pcounter_array = []
+      all_arrays = []
 
-      for x in range(len(feature_quadrants)):
-          temp = feature_quadrants[x];
-          for y in range(len(temp)):
-              if temp[y] != 0:
-                  pix_counter = pix_counter + 1
-          pcounter_array.append(pix_counter)
-          pix_counter = 0
+      for m in range(num_samples):
+          feature_quadrants = all_feature_vectors[m]
+          for x in range(len(feature_quadrants)):
+              temp = feature_quadrants[x];
+              for y in range(len(temp)):
+                  if temp[y] != 0:
+                      pix_counter = pix_counter + 1
+              pcounter_array.append(pix_counter)
+              pix_counter = 0
+          all_arrays.append(pcounter_array)
+          pcounter_array = []
 
-      return pcounter_array
+      return all_arrays
 
 #currently working on figuring out the logic for trainAndTune()
 if __name__ == '__main__':
+    print "Training Phase"
     #stores training data and appropriate labels for faces
-    items = samples.loadDataFile("facedata/facedatatrain",10,60,70)
-    labels = samples.loadLabelsFile("facedata/facedatatrainlabels",10)
+    n = 50;
+    items = samples.loadDataFile("facedata/facedatatrain",n,60,70)
+    labels = samples.loadLabelsFile("facedata/facedatatrainlabels",n)
     all_feature_vectors = [] #stores all 42 quadrants of all sample images
 
-    for k in range(10):
+    for k in range(n):
         #break up face data into 42 10x10 pixel quadrants for feature extraction
         x = 0; y = 0;
         feature_quadrants = [] #will be a list of lists
@@ -212,7 +234,6 @@ if __name__ == '__main__':
             feature_quadrants.append(temp_array)
             temp_array = []
 
-
             #update iterators for parsing through image
             if j_end != 70:
                 j_start = j_end
@@ -223,8 +244,6 @@ if __name__ == '__main__':
                 i_start = i_end
                 i_end = i_end + 10
         all_feature_vectors.append(feature_quadrants)
-
-    print len(all_feature_vectors)
 
     #determines the number of non-zero of pixels in each quadrant"
     all_pcounter_vectors = [] #stores feature vectors of all samples
@@ -242,49 +261,129 @@ if __name__ == '__main__':
             pix_counter = 0
         all_pcounter_vectors.append(pcounter_array)
 
-    print len(all_pcounter_vectors)
-    print all_pcounter_vectors
-
     #calculating and storing log joint probabilities
     true_count = 0;
-    for i in range(10):
+    for i in range(n):
         if labels[i] == 1:
             true_count = true_count + 1;
-
-    p_y_true = true_count/10;
-    p_y_false = 1 - p_y_true;
+    false_count = n - true_count
 
     #calculating number of times a feature = value in the training sets
     #first finds max num of non-zero pixels ifrom all_pcounter_vectors
     max_num = 0;
-    for m in range(10):
+    for m in range(n):
         temp = all_pcounter_vectors[m]
         max_temp = max(temp)
         if max_temp > max_num:
             max_num = max_temp
 
-    print max_num
     #create num_features x max_num array for storing number of times a feature = value in the training sets
     #two tables for true and false training data
-    true_data = [[0 for i in range(max_num)] for j in range(42)]
-    false_data = [[0 for i in range(max_num)] for j in range(42)]
+    true_data = [[0 for i in range(max_num+1)] for j in range(42)]
+    false_data = [[0 for i in range(max_num+1)] for j in range(42)]
 
     for i in range(len(all_pcounter_vectors)):
         temp = all_pcounter_vectors[i]
         for k in range(len(temp)):
             if labels[i] == 1:
-                true_data[k][temp[k]-1] = true_data[k][temp[k]-1] + 1
+                true_data[k][temp[k]] = true_data[k][temp[k]] + 1
             else:
-                false_data[k][temp[k]-1] = false_data[k][temp[k]-1] + 1
-
-    print true_data
-    print false_data
-
-    #have to figure out how to do the calculate likelihood part for validation and testing sets
-    #will do on Sunday
+                false_data[k][temp[k]] = false_data[k][temp[k]] + 1
 
 
+    print "Testing Phase, using k = 1 as smoothing param (haven't tuned using validation data yet)"
+    #calculating likelihood of testing data
+    smoothing_param = 1
+    #steps to take
+    #1. separate testing data into quadrants
+    #2. count number of non-zero pixels in each quadrant
+    #3. calculate the likelihood based on results and stored log-joint probabilities
+    test_num = 1
+    testData = samples.loadDataFile("facedata/facedatatest",test_num,60,70)
+    testLabels = samples.loadLabelsFile("facedata/facedatatestlabels",test_num)
 
+    all_feature_vectors = []  # stores all 42 quadrants of all test images
+
+    #Step 1
+    for k in range(test_num):
+        # break up face data into 42 10x10 pixel quadrants for feature extraction
+        x = 0;
+        y = 0;
+        feature_quadrants = []  # will be a list of lists
+        temp_array = []
+        i_start = 0;
+        i_end = 10;
+        j_start = 0;
+        j_end = 10;
+
+        # converts facedata into 42 10x10 pixel quadrants each
+        while i_end <= 60 and j_end <= 70:
+            # parse through image and store pixels in a temporary array
+            for i in range(i_start, i_end):
+                for j in range(j_start, j_end):
+                    temp_array.append(testData[k].getPixel(i, j))
+
+            # add temp_array to feature_quadrant array and reassign temp_array
+            feature_quadrants.append(temp_array)
+            temp_array = []
+
+            # update iterators for parsing through image
+            if j_end != 70:
+                j_start = j_end
+                j_end = j_end + 10
+            else:
+                j_start = 0
+                j_end = 10
+                i_start = i_end
+                i_end = i_end + 10
+        all_feature_vectors.append(feature_quadrants)
+
+    #Step 2
+    for k in range(len(all_feature_vectors)):
+        pix_counter = 0;  #keeps track of non-zero pixels in a quadrant
+        pcounter_array = []
+        feature_quadrants = all_feature_vectors[k]
+        for x in range(len(feature_quadrants)):
+            temp = feature_quadrants[x];
+            for y in range(len(temp)):
+                if temp[y] != 0:
+                    pix_counter = pix_counter + 1
+            pcounter_array.append(pix_counter)
+            pix_counter = 0
+        all_pcounter_vectors.append(pcounter_array)
+
+    #Step 3 - only doing it for one test facedata image right now
+    pcounter = all_pcounter_vectors[0]
+    p_x_ytrue = 1; # p(x|y = true)
+    p_x_yfalse = 1; # p(x|y = false)
+    p_true = float(true_count/n)
+    p_false = float(false_count/n)
+
+    for r in range(len(pcounter)):
+        t = 3;
+        if pcounter[r] > max_num:
+            t = 0;
+        else:
+            t = pcounter[r]
+        temp1 = float(float((true_count*t + smoothing_param))/float((true_count + smoothing_param)))
+        temp2 = float(float((false_count*t + smoothing_param))/float((false_count + smoothing_param)))
+        p_x_ytrue = float(p_x_ytrue * temp1)
+        p_x_yfalse = float(p_x_yfalse* temp2)
+
+    #likelihood calculation
+    l_x = float(p_x_ytrue*p_true)/float(p_x_yfalse*p_false)
+    if l_x >= 1:
+        print "Prediction: Face"
+    else:
+        print "Prediction: Not face"
+
+    if testLabels[0] == 1:
+        print "Actual: Face"
+    else:
+        print "Actual: Not face"
+
+
+    #DIGIT DATA STUFF, NEED TO IMPLEMENT AS WELL
     #break up digit data into 49 4x4 pixel quadrants for feature extraction
     #items = samples.loadDataFile("digitdata/trainingimages", 1, 28, 28)
     #labels = samples.loadLabelsFile("digitdata/traininglabels", 1)

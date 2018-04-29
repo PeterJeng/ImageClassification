@@ -210,14 +210,13 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 if __name__ == '__main__':
     print "Training Phase"
     #stores training data and appropriate labels for faces
-    n = 50;
+    n = 100;
     items = samples.loadDataFile("facedata/facedatatrain",n,60,70)
     labels = samples.loadLabelsFile("facedata/facedatatrainlabels",n)
     all_feature_vectors = [] #stores all 42 quadrants of all sample images
 
     for k in range(n):
         #break up face data into 42 10x10 pixel quadrants for feature extraction
-        x = 0; y = 0;
         feature_quadrants = [] #will be a list of lists
         temp_array = []
         i_start = 0;  i_end = 10;
@@ -277,7 +276,7 @@ if __name__ == '__main__':
         if max_temp > max_num:
             max_num = max_temp
 
-    #create num_features x max_num array for storing number of times a feature = value in the training sets
+    #create num_features x (max_num+1) array for storing number of times a feature = value in the training sets
     #two tables for true and false training data
     true_data = [[0 for i in range(max_num+1)] for j in range(42)]
     false_data = [[0 for i in range(max_num+1)] for j in range(42)]
@@ -298,7 +297,7 @@ if __name__ == '__main__':
     #1. separate testing data into quadrants
     #2. count number of non-zero pixels in each quadrant
     #3. calculate the likelihood based on results and stored log-joint probabilities
-    test_num = 1
+    test_num = 100
     testData = samples.loadDataFile("facedata/facedatatest",test_num,60,70)
     testLabels = samples.loadLabelsFile("facedata/facedatatestlabels",test_num)
 
@@ -352,36 +351,53 @@ if __name__ == '__main__':
             pix_counter = 0
         all_pcounter_vectors.append(pcounter_array)
 
-    #Step 3 - only doing it for one test facedata image right now
-    pcounter = all_pcounter_vectors[0]
+    #Step 3 - only doing it for facedata images right now
     p_x_ytrue = 1; # p(x|y = true)
     p_x_yfalse = 1; # p(x|y = false)
-    p_true = float(true_count/n)
-    p_false = float(false_count/n)
+    denom1 = float((float(true_count)/float(n)) + smoothing_param)
+    denom2 = float((float(false_count)/float(n)) + smoothing_param)
+    l_x_array = []
+    predictions = []
 
-    for r in range(len(pcounter)):
-        t = 3;
-        if pcounter[r] > max_num:
-            t = 0;
+    for q in range(test_num):
+        pcounter = all_pcounter_vectors[q]
+        for r in range(len(pcounter)):
+            if pcounter[r] > max_num:
+                t1 = t2 = 0;
+            else:
+                t1 = true_data[r][pcounter[r]]
+                t2 = false_data[r][pcounter[r]]
+            num1 = float(true_count * t1 + smoothing_param)
+            num2 = float(false_count * t2 + smoothing_param)
+            temp1 = num1/denom1
+            temp2 = num2/denom2
+            p_x_ytrue = float(p_x_ytrue * temp1)
+            p_x_yfalse = float(p_x_yfalse* temp2)
+            l_x = float(p_x_ytrue*(float(true_count)/float(n)))/float(p_x_yfalse*(float(false_count)/float(n)))
+        l_x_array.append(l_x)
+        p_x_ytrue = p_x_yfalse = 1
+
+    for q in range(len(l_x_array)):
+        if l_x_array[q] >= 1:
+            predictions.append(1)
         else:
-            t = pcounter[r]
-        temp1 = float(float((true_count*t + smoothing_param))/float((true_count + smoothing_param)))
-        temp2 = float(float((false_count*t + smoothing_param))/float((false_count + smoothing_param)))
-        p_x_ytrue = float(p_x_ytrue * temp1)
-        p_x_yfalse = float(p_x_yfalse* temp2)
+            predictions.append(0)
 
-    #likelihood calculation
-    l_x = float(p_x_ytrue*p_true)/float(p_x_yfalse*p_false)
-    if l_x >= 1:
-        print "Prediction: Face"
-    else:
-        print "Prediction: Not face"
+    print "l_x array"
+    print l_x_array
+    print "predictions"
+    print predictions
+    print "actual"
+    print testLabels
 
-    if testLabels[0] == 1:
-        print "Actual: Face"
-    else:
-        print "Actual: Not face"
+    correct = 0
+    for q in range(len(l_x_array)):
+        if predictions[q] == testLabels[q]:
+            correct = correct + 1
 
+    accurate_rate = float(float(correct)/float(test_num))
+    print "accuracy rate - faces only"
+    print accurate_rate
 
     #DIGIT DATA STUFF, NEED TO IMPLEMENT AS WELL
     #break up digit data into 49 4x4 pixel quadrants for feature extraction

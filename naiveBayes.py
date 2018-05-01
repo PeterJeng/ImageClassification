@@ -61,15 +61,37 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     self.legalLabels.
     """
 
-    "*** YOUR CODE HERE ***" #still need to code for digit data
-    # stores training data and appropriate labels for faces
-    n = 10;
-    items = samples.loadDataFile("facedata/facedatatrain", n, 60, 70)
-    labels = samples.loadLabelsFile("facedata/facedatatrainlabels", n)
-    all_feature_vectors = []  # stores all 42 quadrants of all sample images
-    all_pcounter_vectors = [] # stores num of pixels of in all 42 quadrants in all sample images
-    all_feature_vectors = self.faceDivideData(items,n)
-    all_pcounter_vectors = self.featureExtractor(all_feature_vectors,n)
+    "*** YOUR CODE HERE ***"
+    #collecting the counts over the training data
+    label_counters = []
+    for l in range(len(self.legalLabels)):
+        temp = [0 for m in range(len(trainingData[0]))]
+        label_counters.append(temp)
+
+    for i in range(len(trainingData)):
+        temp_label = trainingLabels[i]
+        temp_features = trainingData[i]
+        temp_f_vals = temp_features.values()
+        for x in range(len(temp_f_vals)):
+            temp = label_counters[temp_label]
+            if temp_f_vals[x] > 0:
+                temp[x] = temp[x] + 1
+        label_counters[temp_label] = temp
+
+    #store laplace smoothed estimates
+    #first calculate the number of samples per label
+    total_labels = len(self.legalLabels)
+    train_label_count = [0 for i in range(total_labels)]
+    for x in range(len(trainingLabels)):
+        for y in range(total_labels):
+            if trainingLabels[x] == y:
+                train_label_count[y] = train_label_count[y] + 1
+
+    #now calculate and store laplace smoothed estimates
+    
+
+    #tune using validation data
+
         
   def classify(self, testData):
     """
@@ -115,96 +137,6 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     util.raiseNotDefined()
 
     return featuresOdds
-
-#wrote helper methods to aid with feature extraction for naiveBayes below
-  def faceDivideData(self, items, num_samples):
-      "break up face data into 42 10x10 pixel quadrants for feature extraction"
-      x = 0; y = 0;
-      feature_quadrants = []  # will be a list of lists
-      temp_array = []
-      all_arrays = []
-      i_start = 0; i_end = 10;
-      j_start = 0; j_end = 10;
-
-      for m in range(num_samples):
-          # converts facedata into 42 10x10 pixel quadrants each
-          while i_end <= 60 and j_end <= 70:
-              # parse through image and store pixels in a temporary array
-              for i in range(i_start, i_end):
-                  for j in range(j_start, j_end):
-                      temp_array.append(items[m].getPixel(i, j))
-
-              # add temp_array to feature_quadrant array and reassign temp_array
-              feature_quadrants.append(temp_array)
-              temp_array = []
-
-              # update iterators for parsing through image
-              if j_end != 70:
-                  j_start = j_end
-                  j_end = j_end + 10
-              else:
-                  j_start = 0
-                  j_end = 10
-                  i_start = i_end
-                  i_end = i_end + 10
-          all_arrays.append(feature_quadrants)
-          feature_quadrants = []
-
-      return all_arrays
-
-  def digitDivideData(self, items, num_samples):
-      "break up digit data into 49 4x4 pixel quadrants for feature extraction"
-      x = 0; y = 0;
-      feature_quadrants = []  # will be a list of lists
-      temp_array = []
-      all_arrays = []
-      i_start = 0; i_end = 4;
-      j_start = 0; j_end = 4;
-
-      for m in range(num_samples):
-          while i_end <= 28 and j_end <= 28:
-              # parse through image and store pixels in a temporary array
-              for i in range(i_start, i_end):
-                  for j in range(j_start, j_end):
-                      temp_array.append(items[m].getPixel(i, j))
-
-              # add temp_array to feature_quadrant array and reassign temp_array
-              feature_quadrants.append(temp_array)
-              temp_array = []
-
-              # update iterators for parsing through image
-              if j_end != 28:
-                  j_start = j_end
-                  j_end = j_end + 4
-              else:
-                  j_start = 0
-                  j_end = 4
-                  i_start = i_end
-                  i_end = i_end + 4
-          all_arrays.append(feature_quadrants)
-          feature_quadrants = []
-
-      return all_arrays
-
-  def featureExtractor(self, all_feature_vectors, num_samples):
-      "determines the number of non-zero of pixels in each quadrant"
-      pix_counter = 0;  # keeps track of non-zero pixels in a quadrant
-      pcounter_array = []
-      all_arrays = []
-
-      for m in range(num_samples):
-          feature_quadrants = all_feature_vectors[m]
-          for x in range(len(feature_quadrants)):
-              temp = feature_quadrants[x];
-              for y in range(len(temp)):
-                  if temp[y] != 0:
-                      pix_counter = pix_counter + 1
-              pcounter_array.append(pix_counter)
-              pix_counter = 0
-          all_arrays.append(pcounter_array)
-          pcounter_array = []
-
-      return all_arrays
 
 #currently working on improving accuracy for face data, still have to do it for digit data
 if __name__ == '__main__':

@@ -21,7 +21,7 @@ for x in range(num_img):
            
 
          
-with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\trainingimages", "r") as f:
+with open("digitdata/trainingimages", "r") as f:
     for x in range(num_img):
         for y in range(img_dim):
             for z in range(img_dim): #include newline
@@ -34,7 +34,7 @@ with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\trainingimages", "r") as
      #               train_data[x][y][z] = 2
  
 train_labels = list()  
-with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\traininglabels", "r") as f:
+with open("digitdata/traininglabels", "r") as f:
     for x in range(num_img):
         train_labels.append(int(f.readline()))
     
@@ -50,7 +50,7 @@ for x in range(num_img):
    #         test_data[x][y].append(0)
 
           
-with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\testimages", "r") as f:
+with open("digitdata/testimages", "r") as f:
     for x in range(num_img):
         for y in range(img_dim):
             for z in range(img_dim): 
@@ -63,7 +63,7 @@ with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\testimages", "r") as f:
       #              test_data[x][y][z] = 2
 
 test_labels = list()                   
-with open("C:\\Users\\Aviv\\Downloads\\data\\digitdata\\testlabels", "r") as f:
+with open("digitdata/testlabels", "r") as f:
     for x in range(num_img):
         test_labels.append(int(f.readline()))
         

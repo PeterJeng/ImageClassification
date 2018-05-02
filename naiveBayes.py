@@ -63,7 +63,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 
     "*** YOUR CODE HERE ***"
     #collecting the counts over the training data
-    label_counters = []
+    label_counters = [] #stores the number of times a feature = a specific value over the training set per label
     for l in range(len(self.legalLabels)):
         temp = [0 for m in range(len(trainingData[0]))]
         label_counters.append(temp)
@@ -87,10 +87,31 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
             if trainingLabels[x] == y:
                 train_label_count[y] = train_label_count[y] + 1
 
-    #now calculate and store laplace smoothed estimates
-    
+    #stores P(phi_i(x) AND y = true or false) values in a num_labels x num_features array (since k values chosen during
+    #tuning phase with validation set)
+    cond_prob_array = [[0 for i in range(len(trainingData[0]))] for j in range(len(self.legalLabels))]
+    for l in range(len(self.legalLabels)):
+        temp = label_counters[l]
+        prob = train_label_count[l]
+        for m in range(len(temp)):
+            cond_prob = float(temp[m] * prob)
+            cond_prob_array[l][m] = cond_prob
+    print cond_prob_array
 
-    #tune using validation data
+    #tune using validation data - still need to implement
+    best_k = kgrid[0] #because tuning hasn't been implemented yet
+
+    #stores laplace smoothed estimates (assuming automatic tuning = false and k = 1)
+    k = best_k
+    for l in range(len(self.legalLabels)):
+        temp = cond_prob_array[l]
+        for m in range(len(temp)):
+            t_val = float(temp[m] + k) / float(train_label_count[l] + k)
+            cond_prob_array[l][m] = t_val
+    print cond_prob_array
+
+    #how to store this in log joint probability format so that program can use it when testing????
+
 
         
   def classify(self, testData):
@@ -107,7 +128,6 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
       self.posteriors.append(posterior)
     return guesses
 
-#do we have to implement this??
   def calculateLogJointProbabilities(self, datum):
     """
     Returns the log-joint distribution over legal labels and the datum.

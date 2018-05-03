@@ -87,32 +87,23 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
             if trainingLabels[x] == y:
                 train_label_count[y] = train_label_count[y] + 1
 
+    # tune using validation data - still need to implement
+    best_k = kgrid[0]  # because tuning hasn't been implemented yet
+    k = best_k
+
     #stores P(phi_i(x) AND y = true or false) values in a num_labels x num_features array (since k values chosen during
     #tuning phase with validation set)
     cond_prob_array = [[0 for i in range(len(trainingData[0]))] for j in range(len(self.legalLabels))]
     for l in range(len(self.legalLabels)):
         temp = label_counters[l]
-        prob = train_label_count[l]
+        prob = float(train_label_count[l]) / float(len(trainingLabels))
         for m in range(len(temp)):
-            cond_prob = float(temp[m] * prob)
+            p_temp = float(temp[m] + k) / float(len(trainingLabels))
+            cond_prob = float(p_temp) / float(prob)
             cond_prob_array[l][m] = cond_prob
-    print cond_prob_array
 
-    #tune using validation data - still need to implement
-    best_k = kgrid[0] #because tuning hasn't been implemented yet
-
-    #stores laplace smoothed estimates (assuming automatic tuning = false and k = 1)
-    k = best_k
-    for l in range(len(self.legalLabels)):
-        temp = cond_prob_array[l]
-        for m in range(len(temp)):
-            t_val = float(temp[m] + k) / float(train_label_count[l] + k)
-            cond_prob_array[l][m] = t_val
-    print cond_prob_array
-
-    #how to store this in log joint probability format so that program can use it when testing????
-
-
+    #in order to store logged probabilities in a counter
+    self.calculateLogJointProbabilities(cond_prob_array)
         
   def classify(self, testData):
     """
@@ -128,7 +119,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
       self.posteriors.append(posterior)
     return guesses
 
-  def calculateLogJointProbabilities(self, datum):
+  def calculateLogJointProbabilities(self, cond_prob):
     """
     Returns the log-joint distribution over legal labels and the datum.
     Each log-probability should be stored in the log-joint counter, e.g.    

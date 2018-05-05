@@ -1,106 +1,166 @@
-import util
-import classificationMethod
 import math
-import samples
 
-#currently working on improving accuracy for face data, still have to do it for digit data
-if __name__ == '__main__':
-    print "Training Phase"
-    #stores training data and appropriate labels for faces
-    n = 100
-    items = samples.loadDataFile("facedata/facedatatrain",n,60,70)
-    labels = samples.loadLabelsFile("facedata/facedatatrainlabels",n)
+#Naive Bayes on Digit Data with raw pixels as features
+img_dim = 28  # images are 28x28 chars
+num_labels = 10 # possible labels for each data type
+num_img = 10  # num of sample images
+num_pixels = img_dim * img_dim
 
-    all_features_vector = []
-    #feature extraction - trial 1 - number of zero and non-zero pixels
-    for i in range(n):
-        pix_count = 0
-        for x in range(70):
-            for y in range(60):
-                if items[i].getPixel(y,x) != 0:
-                    pix_count = pix_count + 1
-        all_features_vector.append(pix_count)
+train_data = []
 
-    true_count = 0
-    for i in range(n):
-        if labels[i] == 1:
-            true_count = true_count + 1
-    false_count = n - true_count
+#extract pixel information from training, validation, and testing data
+with open("digitdata/trainingimages", "r") as f:
+    for x in range(num_img):
+        temp = []
+        for y in range(img_dim):
+            temp2 = []
+            for z in range(img_dim):  # include newline
+                c = f.read(1)
+                if c == '#':
+                    temp2.append(1)
+                elif c == '+':
+                    temp2.append(1)
+                else:
+                    temp2.append(0)
+            temp.append(temp2)
+        train_data.append(temp)
 
-    p_true = float(float(true_count)/float(n))
-    p_false = float(float(false_count)/float(n))
+train_labels = []
+with open("digitdata/traininglabels", "r") as f:
+    for x in range(num_img):
+        train_labels.append(int(f.readline()))
 
-    max_num = max(all_features_vector)
-    ranges = round(max_num,-2)
-    while ranges > 10:
-        ranges = ranges/float(10) #in order to have ranges of 0-100 pixels, 100-200 pixels etc.
-    true_data = [0 for i in range(int(ranges) + 1)]
-    false_data = [0 for i in range(int(ranges) + 1)]
+validation_data = []
+with open("digitdata/validationimages", "r") as f:
+    for x in range(num_img):
+        temp = []
+        for y in range(img_dim):
+            temp2 = []
+            for z in range(img_dim):
+                c = f.read(1)
+                if c == '#':
+                    temp2.append(1)
+                elif c == '+':
+                    temp2.append(1)
+                else:
+                    temp2.append(0)
+            temp.append(temp2)
+        validation_data.append(temp)
 
-    for i in range(n):
-        feature = all_features_vector[i]
-        while feature > 10:
-            feature = feature/float(10)
+validation_labels = []
+with open("digitdata/validationlabels", "r") as f:
+    for x in range(num_img):
+        validation_labels.append(int(f.readline()))
 
-        #to find range of feature
-        ind = int(ranges) + 1
-        while ind > feature:
-            ind = ind - 1
+test_data = []
+with open("digitdata/testimages", "r") as f:
+    for x in range(num_img):
+        temp = []
+        for y in range(img_dim):
+            temp2 = []
+            for z in range(img_dim):
+                c = f.read(1)
+                if c == '#':
+                    temp2.append(1)
+                elif c == '+':
+                    temp2.append(1)
+                else:
+                    temp2.append(0)
+            temp.append(temp2)
+        test_data.append(temp)
 
-        if labels[i] == 1:
-            true_data[ind] = true_data[ind] + 1
-        else:
-            false_data[ind] = false_data[ind] + 1
+test_labels = []
+with open("digitdata/testlabels", "r") as f:
+    for x in range(num_img):
+        test_labels.append(int(f.readline()))
 
-    #Testing phase, with smoothing parameter = 1
-    k = 1 #smoothing parameter
-    items = samples.loadDataFile("facedata/facedatatest", n, 60, 70)
-    labels = samples.loadLabelsFile("facedata/facedatatestlabels", n)
+#Training Phase - collects counts from the training data
+fcount_nonzero = [[0 for i in range(num_pixels)] for i in range(num_labels)]
+fcount_zero = [[0 for i in range(num_pixels)] for i in range(num_labels)]
+print "Training Phase..."
+for i in range(len(train_data)):
+    temp = train_data[i]
+    pcount = 0
+    for x in range(img_dim):
+        for y in range(img_dim):
+            if temp[x][y] != 0:
+                fcount_nonzero[train_labels[i]-1][pcount] += 1
+            else:
+                fcount_zero[train_labels[i]-1][pcount] += 1
+            pcount += 1
 
-    all_features_vector = []
-    for i in range(n):
-        pix_count = 0
-        for x in range(70):
-            for y in range(60):
-                if items[i].getPixel(y,x) != 0:
-                    pix_count = pix_count + 1
-        all_features_vector.append(pix_count)
+marg_prob_true = [0 for i in range(num_labels)]
+marg_prob_false = [0 for i in range(num_labels)]
+for i in range(num_img):
+    marg_prob_true[train_labels[i]] += 1
+for i in range(num_img):
+    marg_prob_false[i] = num_img - marg_prob_true[i]
 
-    p_x_ytrue = 1;  # p(x|y = true)
-    p_x_yfalse = 1;  # p(x|y = false)
-    denom1 = float((float(true_count) / float(n)) + k)
-    denom2 = float((float(false_count) / float(n)) + k)
-    l_x_array = []
-    predictions = []
+#Tuning Phase - finds value of k that yields highest accuracy rate (to be used for testing data)
+print "Tuning Phase..."
+kgrid = [0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 20, 50]
+k = 1
+cond_prob_nonzero = [[0 for i in range(num_pixels)] for i in range(num_labels)]
+cond_prob_zero = [[0 for i in range(num_pixels)] for i in range(num_labels)]
+for x in range(num_labels):
+    label_counts_nonzero = fcount_nonzero[x]
+    label_counts_zero = fcount_zero[x]
+    for y in range(len(fcount_nonzero[0])):
+        temp = float(float(label_counts_nonzero[y] + k) / float(marg_prob_true[x] + k))
+        cond_prob_nonzero[x][y] = temp
+        temp = float(float(label_counts_zero[y] + k) / float(marg_prob_true[x] + k))
+        cond_prob_zero[x][y] = temp
 
-    for q in range(n):
-        pcounter = all_features_vector[q]
-        while pcounter > 10:
-            pcounter = pcounter/float(10)
-        ind = int(ranges) + 1
-        while ind > feature:
-            ind = ind - 1
-        num1 = float(true_data[ind]*true_count + k)
-        num2 = float(false_data[ind]*false_count + k)
-        temp1 = num1/denom1
-        temp2 = num2/denom2
-        p_x_ytrue = float(p_x_ytrue)*temp1
-        p_x_yfalse = float(p_x_yfalse)*temp2
-        l_x = float(p_true*p_x_ytrue)/float(p_false*p_x_yfalse)
-        l_x_array.append(l_x)
-        p_x_ytrue = p_x_yfalse = 1
+#Testing Phase - NEEDS TO BE FIXED
+print "Testing Phase..."
+#Calculating likelihood of various images
+predictions = []
+for x in range(num_img):
+    fval = [0 for i in range(num_pixels)]
+    l_x_array = [0 for i in range(num_labels)]
+    temp = test_data[x]
+    #extracts if pixel is nonzero or not from test image
+    for i in range(len(test_data)):
+        pcount = 0
+        for g in range(img_dim):
+            for y in range(img_dim):
+                if temp[g][y] != 0:
+                    fval[pcount] += 1
+    #calculates likelihood for each label for this test image - need to fix use of logs
+    for l in range(num_labels):
+        temp_zero = fcount_zero[l]
+        temp_nonzero = fcount_nonzero[l]
+        mprob_true = marg_prob_true[l]
+        mprob_false = marg_prob_false[l]
+        l_x_true = 0; #initial likelihood value of it being true for a label
+        l_x_false = 0; #initial likelihood value of it being false for a label
+        for i in range(len(fval)):
+            if fval[i] != 0:
+                prob_true = float(temp_nonzero[i] + k) / float(mprob_true + k)
+                false_count = 0
+                for h in range(num_labels):
+                    if h != l:
+                        false_count += fcount_nonzero[h][i]
+                prob_false = float(false_count + k) / float(mprob_false + k)
+                l_x_true = l_x_true + math.log10(prob_true)
+                l_x_false = l_x_false + math.log10(prob_false)
+            else:
+                prob_true = float(temp_zero[i] + k) / float(mprob_true + k)
+                false_count = 0
+                for h in range(num_labels):
+                    if h != l:
+                        false_count += fcount_zero[h][i]
+                prob_false = float(false_count + k) / float(mprob_false + k)
+                l_x_true = l_x_true + math.log10(prob_true)
+                l_x_false = l_x_false + math.log10(prob_false)
+        l_x = (l_x_true/l_x_false) * (float(mprob_true)/float(mprob_false))
+        l_x_array[l] = l_x
+    predictions.append(l_x_array.index(max(l_x_array)))
 
-    for q in range(len(l_x_array)):
-        if l_x_array[q] >= 1:
-            predictions.append(1)
-        else:
-            predictions.append(0)
+print predictions
 
-    correct = 0
-    for q in range(len(l_x_array)):
-        if predictions[q] == labels[q]:
-            correct = correct + 1
 
-    accurate_rate = float(float(correct) / float(n))
-    print "accuracy rate - faces only"
-    print accurate_rate
+
+
+
+

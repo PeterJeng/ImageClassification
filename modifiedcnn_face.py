@@ -35,7 +35,7 @@ def loadData(path):
                         buf[x][img_height + 1] += 1
              #           buf[x][row][col] = 1
             buf[x][img_height + 2] = img_height*img_width - buf[x][img_height] - buf[x][img_height + 1] # get number of empty pixels
-           # buf[x][img_height + 3] = (10 * buf[x][img_height] + buf[x][img_height + 1]) / (img_height*img_width) #average pixel
+            buf[x][img_height + 3] = (10 * buf[x][img_height] + buf[x][img_height + 1]) / (img_height*img_width) #average pixel
             #logistic squeeze of pixel data
      #      for y in range(3):         
       #          buf[x][img_height + y] = 5 / (1 + math.exp(-0.01 * (buf[x][img_height + y] - img_height*img_width/2))) #half the pixels as midway point

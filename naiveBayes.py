@@ -21,7 +21,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
   def __init__(self, legalLabels):
     self.legalLabels = legalLabels
     self.type = "naivebayes"
-    self.k = 1 # this is the smoothing parameter, ** use it in your train method **
+    self.k = 2 # this is the smoothing parameter, ** use it in your train method **
     self.automaticTuning = False # Look at this flag to decide whether to choose k automatically ** use this in your train method **
     
   def setSmoothing(self, k):
@@ -62,48 +62,60 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     """
 
     "*** YOUR CODE HERE ***"
-    #collecting the counts over the training data
-    label_counters = [] #stores the number of times a feature = a specific value over the training set per label
-    for l in range(len(self.legalLabels)):
-        temp = [0 for m in range(len(trainingData[0]))]
-        label_counters.append(temp)
+    #calculating prior probability of labels
+    label_counters = util.Counter()
+    for i in range(len(trainingLabels)):
+        label_counters[trainingLabels[i]] += 1.0
 
+    #initializes feature counter vectors to 0
+    feat_count_zero = util.Counter()
+    feat_count_nonzero = util.Counter()
+    for i in self.features:
+        feat_count_zero[i] = util.Counter()
+        feat_count_nonzero[i] = util.Counter()
+
+    #initialize counts for each label as 0
+    for i in self.features:
+        for j in self.legalLabels:
+            feat_count_zero[i][j] = 0
+            feat_count_nonzero[i][j] = 0
+
+    #counts number of times a pixel is non-zero for all labels
     for i in range(len(trainingData)):
+        temp = trainingData[i]
         temp_label = trainingLabels[i]
-        temp_features = trainingData[i]
-        temp_f_vals = temp_features.values()
-        for x in range(len(temp_f_vals)):
-            temp = label_counters[temp_label]
-            if temp_f_vals[x] > 0:
-                temp[x] = temp[x] + 1
-        label_counters[temp_label] = temp
+        for j in self.features:
+            if temp[j] == 0:
+                feat_count_zero[j][temp_label] += 1.0
+            else:
+                feat_count_nonzero[j][temp_label] += 1.0
 
-    #store laplace smoothed estimates
-    #first calculate the number of samples per label
-    total_labels = len(self.legalLabels)
-    train_label_count = [0 for i in range(total_labels)]
-    for x in range(len(trainingLabels)):
-        for y in range(total_labels):
-            if trainingLabels[x] == y:
-                train_label_count[y] = train_label_count[y] + 1
+    #calculating conditional probability along with tuning k value
+    best_cond_zero = {}
+    best_cont_nonzero = {}
+    best_num_guesses = 0
+    for k in kgrid:
+        num_correct = 0
+        temp_cond_zero = {}
+        temp_cond_nonzero = {}
+        for i in self.features:
+            temp_cond_zero[i] = util.Counter()
+            temp_cond_nonzero[i] = util.Counter()
 
-    # tune using validation data - still need to implement
-    best_k = kgrid[0]  # because tuning hasn't been implemented yet
-    k = best_k
+        #calculating laplace smoothed conditional probabilities
+        for i in self.features:
+            for j in self.legalLabels:
+                temp_cond_zero[i][j] = ( feat_count_zero[i][j] + k ) / ( label_counters[j] + 2*k )
+                temp_cond_nonzero[i][j] = ( feat_count_nonzero[i][j] + k ) / ( label_counters[j] + 2*k )
 
-    #stores P(phi_i(x) AND y = true or false) values in a num_labels x num_features array (since k values chosen during
-    #tuning phase with validation set)
-    cond_prob_array = [[0 for i in range(len(trainingData[0]))] for j in range(len(self.legalLabels))]
-    for l in range(len(self.legalLabels)):
-        temp = label_counters[l]
-        prob = float(train_label_count[l]) / float(len(trainingLabels))
-        for m in range(len(temp)):
-            p_temp = float(temp[m] + k) / float(len(trainingLabels))
-            cond_prob = float(p_temp) / float(prob)
-            cond_prob_array[l][m] = cond_prob
-
-    #in order to store logged probabilities in a counter
-    self.calculateLogJointProbabilities(cond_prob_array)
+        temp_cond = {0: util.Counter(), 1: util.Counter()}
+        temp_cond[0] = temp_cond_zero
+        temp_cond[1] = temp_cond_nonzero
+        self.cond = temp_cond
+        for i in self.legalLabels:
+            label_counters[i] = label_counters[i] / float(len(trainingLabels))
+        self.prior = label_counters
+        #running the conditionals on validation data to determine accuracy and update k as needed
         
   def classify(self, testData):
     """
@@ -119,7 +131,7 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
       self.posteriors.append(posterior)
     return guesses
 
-  def calculateLogJointProbabilities(self, cond_prob):
+  def calculateLogJointProbabilities(self, datum):
     """
     Returns the log-joint distribution over legal labels and the datum.
     Each log-probability should be stored in the log-joint counter, e.g.    
@@ -129,10 +141,18 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
     self.legalLabels.
     """
     logJoint = util.Counter()
-    
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
-    
+    for i in self.legalLabels:
+        logJoint[i] = math.log(self.prior[i])
+        for j in self.features:
+            if datum[j] != 0:
+                prob = self.cond[0][j][i]
+            else:
+                prob = self.cond[1][j][i]
+            if (prob > 0 and math.log(prob) != 0):
+                logJoint[i] += math.log(prob)
+            else:
+                logJoint[i] += 0.0
     return logJoint
   
   def findHighOddsFeatures(self, label1, label2):
@@ -149,21 +169,21 @@ class NaiveBayesClassifier(classificationMethod.ClassificationMethod):
 
     return featuresOdds
 
-#currently working on improving accuracy for face data, still have to do it for digit data
+#accuracy rates for digit data
 if __name__ == '__main__':
     print "Training Phase"
     #stores training data and appropriate labels for faces
-    n = 100;
+    n = 450;
     items = samples.loadDataFile("facedata/facedatatrain",n,60,70)
     labels = samples.loadLabelsFile("facedata/facedatatrainlabels",n)
     all_feature_vectors = [] #stores all 42 quadrants of all sample images
 
     for k in range(n):
-        #break up face data into 42 10x10 pixel quadrants for feature extraction
+        #break up face data into 100 6x7 pixel quadrants for feature extraction
         feature_quadrants = [] #will be a list of lists
         temp_array = []
-        i_start = 0;  i_end = 10;
-        j_start = 0;  j_end = 10;
+        i_start = 0;  i_end = 6;
+        j_start = 0;  j_end = 7;
 
         #converts facedata into 42 10x10 pixel quadrants each
         while i_end <= 60 and j_end <= 70:
@@ -179,12 +199,12 @@ if __name__ == '__main__':
             #update iterators for parsing through image
             if j_end != 70:
                 j_start = j_end
-                j_end = j_end + 10
+                j_end = j_end + 7
             else:
                 j_start = 0
-                j_end = 10
+                j_end = 7
                 i_start = i_end
-                i_end = i_end + 10
+                i_end = i_end + 6
         all_feature_vectors.append(feature_quadrants)
 
     #determines the number of non-zero of pixels in each quadrant"
@@ -221,8 +241,8 @@ if __name__ == '__main__':
 
     #create num_features x (max_num+1) array for storing number of times a feature = value in the training sets
     #two tables for true and false training data
-    true_data = [[0 for i in range(max_num+1)] for j in range(42)]
-    false_data = [[0 for i in range(max_num+1)] for j in range(42)]
+    true_data = [[0 for i in range(max_num+1)] for j in range(100)]
+    false_data = [[0 for i in range(max_num+1)] for j in range(100)]
 
     for i in range(len(all_pcounter_vectors)):
         temp = all_pcounter_vectors[i]
@@ -234,24 +254,25 @@ if __name__ == '__main__':
 
     print "Tuning phase, using validation data to fine tune the smoothing parameter"
     kgrid = [0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 20, 50]
-    valData = samples.loadDataFile("facedata/facedatavalidation", n, 60, 70)
-    valLabels = samples.loadLabelsFile("facedata/facedatavalidationlabels", n)
+    valData = samples.loadDataFile("facedata/facedatavalidation", 100, 60, 70)
+    valLabels = samples.loadLabelsFile("facedata/facedatavalidationlabels", 100)
     all_feature_vectors = []  # stores all 42 quadrants of all test images
     num_correct = []
 
     for b in range(len(kgrid)):
+        all_feature_vectors = []
         smoothing_param = kgrid[b]
         # Step 1
-        for k in range(n):
+        for k in range(100):
             # break up face data into 42 10x10 pixel quadrants for feature extraction
             feature_quadrants = []  # will be a list of lists
             temp_array = []
             i_start = 0;
-            i_end = 10;
+            i_end = 6;
             j_start = 0;
-            j_end = 10;
+            j_end = 7;
 
-            # converts facedata into 42 10x10 pixel quadrants each
+            # converts facedata into 28 15x10 pixel quadrants each
             while i_end <= 60 and j_end <= 70:
                 # parse through image and store pixels in a temporary array
                 for i in range(i_start, i_end):
@@ -265,12 +286,12 @@ if __name__ == '__main__':
                 # update iterators for parsing through image
                 if j_end != 70:
                     j_start = j_end
-                    j_end = j_end + 10
+                    j_end = j_end + 7
                 else:
                     j_start = 0
-                    j_end = 10
+                    j_end = 7
                     i_start = i_end
-                    i_end = i_end + 10
+                    i_end = i_end + 6
             all_feature_vectors.append(feature_quadrants)
 
         # Step 2
@@ -290,12 +311,12 @@ if __name__ == '__main__':
         # Step 3 - only doing it for facedata images right now
         p_x_ytrue = 1;  # p(x|y = true)
         p_x_yfalse = 1;  # p(x|y = false)
-        denom1 = float((float(true_count) / float(n)) + smoothing_param)
-        denom2 = float((float(false_count) / float(n)) + smoothing_param)
+        denom1 = float((float(true_count) / float(n)) + 2*smoothing_param)
+        denom2 = float((float(false_count) / float(n)) + 2*smoothing_param)
         l_x_array = []
         predictions = []
 
-        for q in range(n):
+        for q in range(100):
             pcounter = all_pcounter_vectors[q]
             for r in range(len(pcounter)):
                 if pcounter[r] > max_num:
@@ -352,17 +373,17 @@ if __name__ == '__main__':
 
     #Step 1
     for k in range(test_num):
-        # break up face data into 42 10x10 pixel quadrants for feature extraction
+        # break up face data into 28 15x10 pixel quadrants for feature extraction
         x = 0;
         y = 0;
         feature_quadrants = []  # will be a list of lists
         temp_array = []
         i_start = 0;
-        i_end = 10;
+        i_end = 6;
         j_start = 0;
-        j_end = 10;
+        j_end = 7;
 
-        # converts facedata into 42 10x10 pixel quadrants each
+        # converts facedata into 28 15x10 pixel quadrants each
         while i_end <= 60 and j_end <= 70:
             # parse through image and store pixels in a temporary array
             for i in range(i_start, i_end):
@@ -376,12 +397,12 @@ if __name__ == '__main__':
             # update iterators for parsing through image
             if j_end != 70:
                 j_start = j_end
-                j_end = j_end + 10
+                j_end = j_end + 7
             else:
                 j_start = 0
-                j_end = 10
+                j_end = 7
                 i_start = i_end
-                i_end = i_end + 10
+                i_end = i_end + 6
         all_feature_vectors.append(feature_quadrants)
 
     #Step 2
@@ -438,51 +459,3 @@ if __name__ == '__main__':
     accurate_rate = float(float(correct)/float(test_num))
     print "accuracy rate - faces only"
     print accurate_rate
-
-    #DIGIT DATA STUFF, NEED TO IMPLEMENT AS WELL
-    #break up digit data into 49 4x4 pixel quadrants for feature extraction
-    #items = samples.loadDataFile("digitdata/trainingimages", 1, 28, 28)
-    #labels = samples.loadLabelsFile("digitdata/traininglabels", 1)
-    #x = 0; y = 0;
-    #feature_quadrants2 = []  # will be a list of lists
-    #temp_array = []
-    #i_start = 0; i_end = 4;
-    #j_start = 0; j_end = 4;
-
-    #while i_end <= 28 and j_end <= 28:
-        #parse through image and store pixels in a temporary array
-        #for i in range(i_start, i_end):
-            #for j in range(j_start, j_end):
-                #temp_array.append(items[0].getPixel(i,j))
-
-        #add temp_array to feature_quadrant array and reassign temp_array
-        #feature_quadrants2.append(temp_array)
-        #temp_array = []
-
-        #update iterators for parsing through image
-        #if j_end != 28:
-            #j_start = j_end
-            #j_end = j_end + 4
-        #else:
-            #j_start = 0
-            #j_end = 4
-            #i_start = i_end
-            #i_end = i_end + 4
-
-    #print feature_quadrants2
-    #print len(feature_quadrants2)
-
-    #determines the number of non-zero of pixels in each quadrant
-    #pix_counter2 = 0;  # keeps track of non-zero pixels in a quadrant
-    #pcounter_array2 = []
-
-    #for x in range(len(feature_quadrants2)):
-        #temp = feature_quadrants2[x];
-        #for y in range(len(temp)):
-            #if temp[y] != 0:
-                #pix_counter2 = pix_counter2 + 1
-        #pcounter_array2.append(pix_counter2)
-        #pix_counter2 = 0
-
-    #print pcounter_array2
-    #print len(pcounter_array2)

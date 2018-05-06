@@ -2,8 +2,8 @@ from collections import Counter
 import math
 import operator
 
-img_width = 28 #images are 28x28 chars
-img_height = 28
+img_width = 60 #images are 60x70 chars
+img_height = 70
 
 num_img = 100
 
@@ -30,12 +30,12 @@ def loadData(path):
                     c = f.read(1)
                     if c == '#':
                         buf[x][img_height] += 1
-                        buf[x][row][col] = 2
+              #          buf[x][row][col] = 2
                     elif c == '+': 
                         buf[x][img_height + 1] += 1
-                        buf[x][row][col] = 1
+             #           buf[x][row][col] = 1
             buf[x][img_height + 2] = img_height*img_width - buf[x][img_height] - buf[x][img_height + 1] # get number of empty pixels
-            buf[x][img_height + 3] = (10 * buf[x][img_height] + buf[x][img_height + 1]) / (img_height*img_width) #average pixel
+           # buf[x][img_height + 3] = (10 * buf[x][img_height] + buf[x][img_height + 1]) / (img_height*img_width) #average pixel
             #logistic squeeze of pixel data
      #      for y in range(3):         
       #          buf[x][img_height + y] = 5 / (1 + math.exp(-0.01 * (buf[x][img_height + y] - img_height*img_width/2))) #half the pixels as midway point
@@ -52,11 +52,11 @@ def loadLabels(path):
     
 print("Loading Data")
 
-train_data = loadData("digitdata/trainingimages")   
-train_labels = loadLabels("digitdata/traininglabels")
+train_data = loadData("facedata/facedatatrain")   
+train_labels = loadLabels("facedata/facedatatrainlabels")
  
-test_data = loadData("digitdata/testimages")
-test_labels = loadLabels("digitdata/testlabels")
+test_data = loadData("facedata/facedatatest")
+test_labels = loadLabels("facedata/facedatatestlabels")
 
 #training
 print("Beginning Training Phase")
@@ -68,9 +68,9 @@ for x in range(num_img):
     for y in range(num_img):
         if (train_labels[x] != train_labels[y]):
             dist = 0
-            for row in range(img_height):
-                for col in range(img_width):
-                    dist += math.pow((train_data[x][row][col] - train_data[y][row][col]), 2) 
+     #       for row in range(img_height):
+      #          for col in range(img_width):
+       #             dist += math.pow((train_data[x][row][col] - train_data[y][row][col]), 2) 
             for z in range(4):       
                 dist += math.pow((train_data[x][img_height + z] - train_data[y][img_height + z]), 2) 
             dist = math.sqrt(dist)
@@ -148,9 +148,9 @@ for x in range(num_img):
     nearest_neighbors = list()
     for training_sample in STORE:
         dist = 0
-        for row in range(img_height):
-            for col in range(img_width):
-                dist += math.pow((train_data[training_sample[2]][row][col] - test_data[x][row][col]), 2)  
+       # for row in range(img_height):
+        #    for col in range(img_width):
+        #        dist += math.pow((train_data[training_sample[2]][row][col] - test_data[x][row][col]), 2)  
         for y in range(4):       
             dist += math.pow((train_data[x][img_height + y] - train_data[training_sample[2]][img_height + y]), 2) 
         dist = math.sqrt(dist)

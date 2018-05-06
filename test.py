@@ -6,7 +6,7 @@ import util
 if __name__ == '__main__':
     print "Training Phase"
     #stores training data and appropriate labels for faces
-    n = 50;
+    n = 1000;
     items = samples.loadDataFile("digitdata/trainingimages",n,28,28)
     labels = samples.loadLabelsFile("digitdata/traininglabels",n)
     all_feature_vectors = [] #stores all quadrants of all sample images
@@ -61,27 +61,36 @@ if __name__ == '__main__':
     for i in range(n):
         marg_prob[labels[i]] += 1
 
+    max_num = 0;
+    for m in range(n):
+        temp = all_pcounter_vectors[m]
+        max_temp = max(temp)
+        if max_temp > max_num:
+            max_num = max_temp
+
     #stores how many times a quadrant was 0 or not across all samples for each label
-    zero_data = [[0 for i in range(16)] for j in range(10)]
-    nonzero_data = [[0 for i in range(16)] for j in range(10)]
+    zero_data = [[0 for i in range(max_num+1)] for j in range(10)]
+    nonzero_data = [[0 for i in range(max_num+1)] for j in range(10)]
     label_data = util.Counter()
     for i in range(len(all_pcounter_vectors)):
         temp = all_pcounter_vectors[i]
         for j in range(16):
             if temp[j] > 0:
-                nonzero_data[labels[i]][j] += 1
+                nonzero_data[labels[i]][temp[j]] += 1
             else:
-                zero_data[labels[i]][j] += 1
+                zero_data[labels[i]][temp[j]] += 1
 
     print "Tuning phase, using validation data to fine tune the smoothing parameter"
     kgrid = [0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 20, 50]
     valData = samples.loadDataFile("digitdata/validationimages", 100, 28, 28)
     valLabels = samples.loadLabelsFile("digitdata/validationlabels", 100)
     all_feature_vectors = []  # stores all 42 quadrants of all validation images
+    all_pcounter_vectors = []
     num_correct = []
 
     for b in range(len(kgrid)):
         all_feature_vectors = []
+        all_pcounter_vectors = []
         smoothing_param = kgrid[b]
         # Step 1
         for k in range(100):
@@ -116,21 +125,38 @@ if __name__ == '__main__':
             all_feature_vectors.append(feature_quadrants)
 
         # Step 2
-        for k in range(len(all_feature_vectors)):
-            pix_counter = 0;  # keeps track of non-zero pixels in a quadrant
-            pcounter_array = []
-            feature_quadrants = all_feature_vectors[k]
-            for x in range(len(feature_quadrants)):
-                temp = feature_quadrants[x];
-                for y in range(len(temp)):
-                    if temp[y] != 0:
-                        pix_counter = pix_counter + 1
-                pcounter_array.append(pix_counter)
-                pix_counter = 0
-        all_pcounter_vectors.append(pcounter_array)
+            for k in range(len(all_feature_vectors)):
+                pix_counter = 0;  # keeps track of non-zero pixels in a quadrant
+                pcounter_array = []
+                feature_quadrants = all_feature_vectors[k]
+                for x in range(len(feature_quadrants)):
+                    temp = feature_quadrants[x];
+                    for y in range(len(temp)):
+                        if temp[y] != 0:
+                            pix_counter = pix_counter + 1
+                    pcounter_array.append(pix_counter)
+                    pix_counter = 0
+            all_pcounter_vectors.append(pcounter_array)
 
         # Step 3 - make predictions based on validation data
         predictions = []
+
+        for i in range(len(all_pcounter_vectors)):
+            l_x_array = []
+            for i in range(10):
+                mprob = float(marg_prob[i]) / float(100)
+                l_x_array.append(mprob)
+            temp = all_pcounter_vectors[i]  #pcounter of one image
+            for j in range(16):
+                if temp[j] == 0:
+                    for m in range(len(l_x_array)):
+                        l_x_array[m] =  l_x_array[m] * float(float(zero_data[m][j] + k) / float(marg_prob[m] + 2*k))
+                else:
+                    for m in range(len(l_x_array)):
+                        l_x_array[m] = l_x_array[m] * float(float(nonzero_data[m][j] + k) / float(marg_prob[m] + 2*k))
+
+            predictions.append(l_x_array.index(max(l_x_array)))
+        print predictions
 
 
     #print "Testing Phase"

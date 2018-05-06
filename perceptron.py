@@ -47,10 +47,26 @@ class PerceptronClassifier:
     
     for iteration in range(self.max_iterations):
       print "Starting iteration ", iteration, "..."
+
       for i in range(len(trainingData)):
-          "*** YOUR CODE HERE ***"
-          util.raiseNotDefined()
-    
+          # uses every pixel in the image of the training data as feature
+          # Face: 60 x 70, Digit: 30 x 40
+          scores = util.Counter()
+          for label in self.legalLabels:
+            # calculate the dot product of the two vectors
+            scores[label] = trainingData[i] * self.weights[label]
+
+          #get the label with the highest score
+          highestScore = scores.argMax()
+
+          actual = trainingLabels[i]
+
+          #Increase the weights of the correct label with the value of currentFeature
+          #Decrease the weights of the incorrect label with the value of currentFeature
+          if highestScore != actual:
+            self.weights[actual] += trainingData[i]
+            self.weights[highestScore] -= trainingData[i]
+
   def classify(self, data ):
     """
     Classifies each datum as the label that most closely matches the prototype vector

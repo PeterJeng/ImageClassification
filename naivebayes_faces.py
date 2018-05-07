@@ -161,10 +161,10 @@ if __name__ == '__main__':
 
     best_k_ind = num_correct.index(max(num_correct))
     k = kgrid[best_k_ind]
-    print "smoothing_param is "
+    print "Best K value is "
     print k
-    print "best num correct in validation set is "
-    print max(num_correct)
+    print "Validation set accuracy rate is: "
+    print float(max(num_correct)) / float(100)
 
     print "Testing Phase"
     #calculating likelihood of testing data
@@ -255,5 +255,5 @@ if __name__ == '__main__':
             correct += 1
 
     accurate_rate = float(float(correct)/float(test_num))
-    print "accuracy rate - faces only"
+    print "Testing Set accuracy rate is: "
     print accurate_rate

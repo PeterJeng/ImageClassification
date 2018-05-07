@@ -6,7 +6,7 @@ import util
 if __name__ == '__main__':
     print "Training Phase"
     #stores training data and appropriate labels for faces
-    n = 1000;
+    n = 5000;
     items = samples.loadDataFile("digitdata/trainingimages",n,28,28)
     labels = samples.loadLabelsFile("digitdata/traininglabels",n)
     all_feature_vectors = [] #stores all quadrants of all sample images
@@ -157,6 +157,10 @@ if __name__ == '__main__':
 
     best_k = num_correct.index(max(num_correct))
     k = kgrid[best_k]
+    print "Best K value is "
+    print k
+    print "Validation set accuracy rate is: "
+    print float(max(num_correct)) / float(100)
 
     print "Testing Phase"
     test_num = 100
@@ -236,7 +240,10 @@ if __name__ == '__main__':
     for i in range(len(predictions)):
         if predictions[i] == testLabels[i]:
             correct += 1
-    print correct
+
+    accurate_rate = float(float(correct) / float(test_num))
+    print "Testing Set accuracy rate is: "
+    print accurate_rate
 
 
 

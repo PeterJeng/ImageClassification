@@ -8,6 +8,7 @@
 
 # Perceptron implementation
 import util
+import time
 PRINT = True
 
 class PerceptronClassifier:
@@ -28,8 +29,7 @@ class PerceptronClassifier:
   def setWeights(self, weights):
     assert len(weights) == len(self.legalLabels);
     self.weights == weights;
-      
-  def train( self, trainingData, trainingLabels, validationData, validationLabels ):
+
     """
     The training loop for the perceptron passes through the training data several
     times and updates the weight vector for each label based on classification errors.
@@ -40,32 +40,46 @@ class PerceptronClassifier:
     datum is a counter from features to values for those features
     (and thus represents a vector a values).
     """
-    
+
+  def train( self, trainingData, trainingLabels, validationData, validationLabels ):
+    subTrainingData = []
+    subTrainingLabels = []
+
+    n = 0
+    for index in range(45):
+        subTrainingData.append(trainingData[n + index])
+        subTrainingLabels.append(trainingLabels[n + index])
+
+
     self.features = trainingData[0].keys() # could be useful later
     # DO NOT ZERO OUT YOUR WEIGHTS BEFORE STARTING TRAINING, OR
     # THE AUTOGRADER WILL LIKELY DEDUCT POINTS.
-    
+
+    startTime = time.time()
     for iteration in range(self.max_iterations):
       print "Starting iteration ", iteration, "..."
 
-      for i in range(len(trainingData)):
+      for i in range(len(subTrainingData)):
           # uses every pixel in the image of the training data as feature
-          # Face: 60 x 70, Digit: 30 x 40
+          # Face: 60 x 70, Digit: 28 x 28
           scores = util.Counter()
           for label in self.legalLabels:
             # calculate the dot product of the two vectors
-            scores[label] = trainingData[i] * self.weights[label]
+            scores[label] = subTrainingData[i] * self.weights[label]
 
           #get the label with the highest score
           highestScore = scores.argMax()
 
-          actual = trainingLabels[i]
+          actual = subTrainingLabels[i]
 
           #Increase the weights of the correct label with the value of currentFeature
           #Decrease the weights of the incorrect label with the value of currentFeature
           if highestScore != actual:
-            self.weights[actual] += trainingData[i]
-            self.weights[highestScore] -= trainingData[i]
+            self.weights[actual] += subTrainingData[i]
+            self.weights[highestScore] -= subTrainingData[i]
+
+    elapsedTime = time.time() - startTime
+    print elapsedTime
 
   def classify(self, data ):
     """
